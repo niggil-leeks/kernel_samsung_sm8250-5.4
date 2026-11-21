@@ -75,6 +75,10 @@
 
 #include "uid16.h"
 
+#ifdef CONFIG_KSU_MANUAL_HOOK
+extern int ksu_handle_setresuid(uid_t *ruid, uid_t *euid, uid_t *suid);
+#endif
+
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a, b)	(-EINVAL)
 #endif
@@ -625,6 +629,9 @@ SYSCALL_DEFINE1(setuid, uid_t, uid)
  */
 long __sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 {
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	ksu_handle_setresuid(&ruid, &euid, &suid);
+#endif
 	struct user_namespace *ns = current_user_ns();
 	const struct cred *old;
 	struct cred *new;

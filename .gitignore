@@ -147,6 +147,3 @@ out/
 tc/
 *.zip
 
-# KernelSU build changes
-drivers/
-KernelSU/
