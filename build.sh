@@ -10,6 +10,9 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 export DEVICE=r8q
+export KBUILD_BUILD_USER="nihil"
+export KBUILD_BUILD_HOST="aspire-dev"
+export KBUILD_COMPILER_STRING="Snapdragon LLVM ARM Compiler 19.0.0"
 
 PREBUILT_MODE=0
 
@@ -29,14 +32,11 @@ for arg in "$@"; do
     esac
 done
 
-BUILD_DATE_HEX=$(printf "%04X%02X%02X%02X%02X%02X" $(date +"%Y %m %d %H %M %S"))
-export KBUILD_BUILD_HEX_DATE="$BUILD_DATE_HEX"
-
 # ===== AnyKernel3 =====
 AK3_REPO="https://github.com/doubledashdot/AnyKernel3"
 AK3_BRANCH="$DEVICE-ksu"
 
-ZIPNAME="Orchestrator-$DEVICE-$(date "+%Y%m%d")-$BUILD_DATE_HEX.zip"
+ZIPNAME="Orchestrator-$DEVICE-5.4-$(date "+%Y%m%d").zip"
 TC_DIR="$(pwd)/tc/clang"
 TC_BIN="$TC_DIR/bin"
 export PATH="$TC_BIN:$PATH"
@@ -83,7 +83,7 @@ echo -e "${YELLOW}building with: $DEFCONFIG${NC}"
 make O=out ARCH=arm64 HOSTCC=clang CC=clang $DEFCONFIG
 make O=out ARCH=arm64 HOSTCC=clang CC=clang olddefconfig
 
-echo -e "\n${YELLOW}Starting compilation (Version: 5.4.233-Mushroom/$BUILD_DATE_HEX)...${NC}\n"
+echo -e "\n${YELLOW}Starting compilation (Version: 5.4.233-Orchestrator/qgki+)...${NC}\n"
 
 MAKE_ARGS=(
     -j$(nproc --all)

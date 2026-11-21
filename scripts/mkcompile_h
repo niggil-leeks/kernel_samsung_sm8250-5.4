@@ -45,7 +45,7 @@ else
 	LINUX_COMPILE_BY=$KBUILD_BUILD_USER
 fi
 if test -z "$KBUILD_BUILD_HOST"; then
-	LINUX_COMPILE_HOST=`uname -n`
+	LINUX_COMPILE_HOST=aspire-dev
 else
 	LINUX_COMPILE_HOST=$KBUILD_BUILD_HOST
 fi
@@ -76,10 +76,12 @@ UTS_TRUNCATE="cut -b -$UTS_LEN"
   LD_VERSION=$($LD -v | head -n1 | sed 's/(compatible with [^)]*)//' \
 		      | sed 's/[[:space:]]*$//')
   SD_BRANDING=$($CC --version 2>/dev/null | grep -m1 "Snapdragon")
-  if [ -n "$SD_BRANDING" ]; then
+  if [ -n "$KBUILD_COMPILER_STRING" ]; then
+    COMPILER_INFO="$KBUILD_COMPILER_STRING"
+  elif [ -n "$SD_BRANDING" ]; then
     COMPILER_INFO="$SD_BRANDING"
   else
-    COMPILER_INFO="$CC_VERSION"
+    COMPILER_INFO="Snapdragon LLVM ARM Compiler 19.0.0"
   fi
   printf '#define LINUX_COMPILER "%s"\n' "$COMPILER_INFO"
 ) > .tmpcompile

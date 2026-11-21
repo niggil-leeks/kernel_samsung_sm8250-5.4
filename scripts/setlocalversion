@@ -71,15 +71,9 @@ scm_version()
 			printf '%s' "-$android_release"
 		fi
 
-		# Get build hex timestamp: year, month, day, hour, min, sec
+		# Suffix
 		if test "$CONFIG_LOCALVERSION_SHA" = "y"; then
-			if [ -n "$KBUILD_BUILD_HEX_DATE" ]; then
-				hex_ts="$KBUILD_BUILD_HEX_DATE"
-			else
-				d=$(date +"%Y %m %d %H %M %S")
-				hex_ts=$(printf "%04X%02X%02X%02X%02X%02X" $d)
-			fi
-			printf '%s' "/$hex_ts"
+			printf '%s' "/qgki+"
 			return
 		fi
 
