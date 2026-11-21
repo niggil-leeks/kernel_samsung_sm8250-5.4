@@ -55,7 +55,7 @@ curl -LSs "https://raw.githubusercontent.com/doubledashdot/sKernelSU/master/kern
 export PATH="$TC_DIR/bin:$PATH"
 
 if ! [ -d "$TC_DIR" ]; then
-    echo -e "${YELLOW}Snapdragon LLVM ARM Compiler 19.0.0 not found!${NC}"
+    echo -e "${YELLOW}Snapdragon LLVM ARM Compiler 18.0.0 not found!${NC}"
     exit 1
 fi
 

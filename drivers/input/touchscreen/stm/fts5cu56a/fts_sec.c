@@ -6241,7 +6241,6 @@ static void report_rate(void *device_data)
 	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
 	struct fts_ts_info *info = container_of(sec, struct fts_ts_info, sec);
 	char buff[SEC_CMD_STR_LEN] = { 0 };
-	u8 scan_rate;
 
 	sec_cmd_set_default_result(sec);
 
@@ -6259,8 +6258,7 @@ static void report_rate(void *device_data)
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	} else {
 
-		scan_rate = sec->cmd_param[0] == 0 ? 240 : (u8)sec->cmd_param[0];
-		fts_change_scan_rate(info, scan_rate);
+		fts_change_scan_rate(info, 240);
 
 		snprintf(buff, sizeof(buff), "OK");
 		sec->cmd_state = SEC_CMD_STATUS_OK;

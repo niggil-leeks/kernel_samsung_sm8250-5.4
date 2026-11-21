@@ -908,7 +908,7 @@ static int fts_set_sip_mode(struct fts_ts_info *info, u8 enable)
 
 void fts_change_scan_rate(struct fts_ts_info *info, u8 rate)
 {
-	u8 regAdd[2] = {FTS_CMD_SET_GET_REPORT_RATE, rate};
+	u8 regAdd[2] = {FTS_CMD_SET_GET_REPORT_RATE, 240};
 	int ret = 0;
 
 	ret = fts_write_reg(info, &regAdd[0], 2);
@@ -2146,6 +2146,13 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 					}
 					break;
 				}
+			} else if (event_buff[1] == FTS_GESTURE_CODE_DOUBLE_TAP || p_gesture_status->stype == FTS_SPONGE_EVENT_DOUBLETAP) {
+				input_report_key(info->input_dev, KEY_WAKEUP, 1);
+				input_sync(info->input_dev);
+				input_report_key(info->input_dev, KEY_WAKEUP, 0);
+				input_sync(info->input_dev);
+				pm_wakeup_event(&info->client->dev, 1000);
+				input_info(true, &info->client->dev, "%s: DOUBLE TAP TO WAKEUP (raw gesture)\n", __func__);
 			}
 #endif
 			break;

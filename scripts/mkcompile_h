@@ -81,7 +81,7 @@ UTS_TRUNCATE="cut -b -$UTS_LEN"
   elif [ -n "$SD_BRANDING" ]; then
     COMPILER_INFO="$SD_BRANDING"
   else
-    COMPILER_INFO="Snapdragon LLVM ARM Compiler 19.0.0"
+    COMPILER_INFO="Snapdragon LLVM ARM Compiler 18.0.0"
   fi
   printf '#define LINUX_COMPILER "%s"\n' "$COMPILER_INFO"
 ) > .tmpcompile

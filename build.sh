@@ -12,7 +12,7 @@ NC='\033[0m'
 export DEVICE=r8q
 export KBUILD_BUILD_USER="nihil"
 export KBUILD_BUILD_HOST="aspire-dev"
-export KBUILD_COMPILER_STRING="Snapdragon LLVM ARM Compiler 19.0.0"
+export KBUILD_COMPILER_STRING="Snapdragon LLVM ARM Compiler 18.0.0"
 
 PREBUILT_MODE=0
 
