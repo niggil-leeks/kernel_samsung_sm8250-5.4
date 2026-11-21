@@ -265,8 +265,7 @@ static void gw9558_work_func_debug(struct work_struct *work)
 
 static void gw9558_enable_debug_timer(struct gf_device *gf_dev)
 {
-	mod_timer(&g_data->dbg_timer,
-		round_jiffies_up(jiffies + FPSENSOR_DEBUG_TIMER_SEC));
+	/* Disabled to eliminate periodic wakeups and dmesg overhead */
 }
 
 static void gw9558_disable_debug_timer(struct gf_device *gf_dev)
@@ -277,9 +276,7 @@ static void gw9558_disable_debug_timer(struct gf_device *gf_dev)
 
 static void gw9558_timer_func(struct timer_list *t)
 {
-	queue_work(g_data->wq_dbg, &g_data->work_debug);
-	mod_timer(&g_data->dbg_timer,
-		round_jiffies_up(jiffies + FPSENSOR_DEBUG_TIMER_SEC));
+	/* Disabled to eliminate periodic wakeups and dmesg overhead */
 }
 
 static int gw9558_set_timer(struct gf_device *gf_dev)
