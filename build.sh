@@ -37,14 +37,15 @@ AK3_REPO="https://github.com/doubledashdot/AnyKernel3"
 AK3_BRANCH="$DEVICE-ksu"
 
 ZIPNAME="Orchestrator-$DEVICE-5.4-$(date "+%Y%m%d").zip"
-TC_DIR="$(pwd)/tc/clang"
+TC_DIR="$(pwd)/tc/sdclang"
+ln -sfn "$TC_DIR" "$(pwd)/tc/sdclang20" 2>/dev/null || true
 TC_BIN="$TC_DIR/bin"
 export PATH="$TC_BIN:$PATH"
 
 if [ "$PREBUILT_MODE" -eq 1 ]; then
-    DEFCONFIG="vendor/kona-vanadium_defconfig vendor/samsung/$DEVICE.config vendor/extra/no-ksu.config"
+    DEFCONFIG="vendor/kona-vanadium_defconfig vendor/samsung/$DEVICE.config vendor/extra/no-ksu.config vendor/extra/sdclang.config"
 else
-    DEFCONFIG="vendor/kona-vanadium_defconfig vendor/samsung/$DEVICE.config vendor/extra/ksu.config"
+    DEFCONFIG="vendor/kona-vanadium_defconfig vendor/samsung/$DEVICE.config vendor/extra/ksu.config vendor/extra/sdclang.config"
 fi
 
 OUT_DIR="$(pwd)/out"
@@ -80,8 +81,8 @@ fi
 mkdir -p out
 echo -e "${YELLOW}building with: $DEFCONFIG${NC}"
 
-make O=out ARCH=arm64 HOSTCC=clang CC=clang $DEFCONFIG
-make O=out ARCH=arm64 HOSTCC=clang CC=clang olddefconfig
+make O=out ARCH=arm64 HOSTCC=/usr/bin/clang CC=clang $DEFCONFIG
+make O=out ARCH=arm64 HOSTCC=/usr/bin/clang CC=clang olddefconfig
 
 echo -e "\n${YELLOW}Starting compilation (Version: 5.4.233-Orchestrator/qgki+)...${NC}\n"
 
@@ -90,8 +91,8 @@ MAKE_ARGS=(
     O=out
     ARCH=arm64
     CC=clang
-    HOSTCC=clang
-    HOSTCXX=clang++
+    HOSTCC=/usr/bin/clang
+    HOSTCXX=/usr/bin/clang++
     LD=$TC_BIN/ld.lld
     AS=$TC_BIN/llvm-as
     AR=$TC_BIN/llvm-ar
@@ -103,6 +104,7 @@ MAKE_ARGS=(
     STRIP=$TC_BIN/llvm-strip
     CROSS_COMPILE=aarch64-linux-gnu-
     CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+    KCFLAGS="-Xclang -fexperimental-assignment-tracking=disabled -Wno-pointer-sign -Wno-default-const-init-field-unsafe -Wno-default-const-init-var-unsafe -Wno-undefined-optimized"
     LLVM=1
     LLVM_IAS=1
 )
