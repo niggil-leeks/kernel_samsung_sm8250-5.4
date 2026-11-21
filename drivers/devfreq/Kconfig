@@ -278,6 +278,12 @@ config DEVFREQ_CPU_LLCC_DDR_BW_BOOST_FREQ
 	help
 	  Boost frequency for the MSM DDR bus.
 
+config DEVFREQ_GPU_BOOST_FREQ
+	int "Boost freq for GPU devfreq device"
+	default "0"
+	help
+	  Boost frequency in Hz for the Adreno GPU devfreq device.
+
 endif
 
 source "drivers/devfreq/event/Kconfig"

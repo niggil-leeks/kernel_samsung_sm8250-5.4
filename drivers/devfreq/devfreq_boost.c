@@ -52,7 +52,9 @@ static void devfreq_max_unboost(struct work_struct *work);
 
 static struct df_boost_drv df_boost_drv_g __read_mostly = {
 	BOOST_DEV_INIT(df_boost_drv_g, DEVFREQ_CPU_LLCC_DDR_BW,
-		       CONFIG_DEVFREQ_CPU_LLCC_DDR_BW_BOOST_FREQ)
+		       CONFIG_DEVFREQ_CPU_LLCC_DDR_BW_BOOST_FREQ),
+	BOOST_DEV_INIT(df_boost_drv_g, DEVFREQ_GPU,
+		       CONFIG_DEVFREQ_GPU_BOOST_FREQ)
 };
 
 static void __devfreq_boost_kick(struct boost_dev *b)
@@ -139,18 +141,30 @@ static void devfreq_max_unboost(struct work_struct *work)
 	wake_up(&b->boost_waitq);
 }
 
+static unsigned long devfreq_get_floor_freq(struct devfreq *df)
+{
+	unsigned int n = df->profile->max_state;
+	if (!n || !df->profile->freq_table)
+		return 0;
+	if (df->profile->freq_table[0] > df->profile->freq_table[n - 1])
+		return df->profile->freq_table[n - 1];
+	return df->profile->freq_table[0];
+}
+
 static void devfreq_update_boosts(struct boost_dev *b, unsigned long state)
 {
 	struct devfreq *df = b->df;
+	unsigned long floor_freq;
 
 	mutex_lock(&df->lock);
+	floor_freq = devfreq_get_floor_freq(df);
 	if (state & BIT(SCREEN_OFF)) {
-		df->min_freq = df->profile->freq_table[0];
+		df->min_freq = floor_freq;
 		df->max_boost = false;
 	} else {
 		df->min_freq = state & BIT(INPUT_BOOST) ?
 			       min(b->boost_freq, df->max_freq) :
-			       df->profile->freq_table[0];
+			       floor_freq;
 		df->max_boost = state & BIT(MAX_BOOST);
 	}
 	update_devfreq(df);
