@@ -1,3 +1,6 @@
+#!/bin/bash
+unset BASH_ENV
+
 SECONDS=0 # builtin bash timer
 
 GREEN='\033[0;32m'
@@ -26,33 +29,28 @@ for arg in "$@"; do
     esac
 done
 
+BUILD_DATE_HEX=$(printf "%04X%02X%02X%02X%02X%02X" $(date +"%Y %m %d %H %M %S"))
+export KBUILD_BUILD_HEX_DATE="$BUILD_DATE_HEX"
+
 # ===== AnyKernel3 =====
 AK3_REPO="https://github.com/doubledashdot/AnyKernel3"
 AK3_BRANCH="$DEVICE-ksu"
 
-ZIPNAME="aospksu-$(date '+%Y%m%d').zip"
+ZIPNAME="Orchestrator-$DEVICE-$(date "+%Y%m%d")-$BUILD_DATE_HEX.zip"
 TC_DIR="$(pwd)/tc/clang"
+TC_BIN="$TC_DIR/bin"
+export PATH="$TC_BIN:$PATH"
+
 if [ "$PREBUILT_MODE" -eq 1 ]; then
-DEFCONFIG="vendor/kona-vanadium_defconfig vendor/samsung/$DEVICE.config vendor/extra/no-ksu.config"
+    DEFCONFIG="vendor/kona-vanadium_defconfig vendor/samsung/$DEVICE.config vendor/extra/no-ksu.config"
 else
-DEFCONFIG="vendor/kona-vanadium_defconfig vendor/samsung/$DEVICE.config vendor/extra/ksu.config"
+    DEFCONFIG="vendor/kona-vanadium_defconfig vendor/samsung/$DEVICE.config vendor/extra/ksu.config"
 fi
 
 OUT_DIR="$(pwd)/out"
 BOOT_DIR="$OUT_DIR/arch/arm64/boot"
 DTS_DIR="$BOOT_DIR/dts/vendor/qcom"
 PREBUILT_DIR="$OUT_DIR/prebuilt-kernel"
-
-if test -z "$(git rev-parse --show-cdup 2>/dev/null)" &&
-   head=$(git rev-parse --verify HEAD 2>/dev/null); then
-    ZIPNAME="${ZIPNAME::-4}-$(echo $head | cut -c1-8)-$DEVICE.zip"
-fi
-
-rm -rf KernelSU
-
-curl -LSs "https://raw.githubusercontent.com/doubledashdot/sKernelSU/master/kernel/setup.sh" | bash -s master
-
-export PATH="$TC_DIR/bin:$PATH"
 
 if ! [ -d "$TC_DIR" ]; then
     echo -e "${YELLOW}Clang not found! Downloading...${NC}"
@@ -82,23 +80,27 @@ fi
 mkdir -p out
 echo -e "${YELLOW}building with: $DEFCONFIG${NC}"
 
-make O=out ARCH=arm64 $DEFCONFIG
-make O=out ARCH=arm64 olddefconfig
+make O=out ARCH=arm64 HOSTCC=clang CC=clang $DEFCONFIG
+make O=out ARCH=arm64 HOSTCC=clang CC=clang olddefconfig
 
-echo -e "\n${YELLOW}Starting compilation...${NC}\n"
+echo -e "\n${YELLOW}Starting compilation (Version: 5.4.233-Mushroom/$BUILD_DATE_HEX)...${NC}\n"
 
 MAKE_ARGS=(
     -j$(nproc --all)
     O=out
     ARCH=arm64
     CC=clang
-    LD=ld.lld
-    AS=llvm-as
-    AR=llvm-ar
-    NM=llvm-nm
-    OBJCOPY=llvm-objcopy
-    OBJDUMP=llvm-objdump
-    STRIP=llvm-strip
+    HOSTCC=clang
+    HOSTCXX=clang++
+    LD=$TC_BIN/ld.lld
+    AS=$TC_BIN/llvm-as
+    AR=$TC_BIN/llvm-ar
+    LLVM_AR=$TC_BIN/llvm-ar
+    NM=$TC_BIN/llvm-nm
+    LLVM_NM=$TC_BIN/llvm-nm
+    OBJCOPY=$TC_BIN/llvm-objcopy
+    OBJDUMP=$TC_BIN/llvm-objdump
+    STRIP=$TC_BIN/llvm-strip
     CROSS_COMPILE=aarch64-linux-gnu-
     CROSS_COMPILE_ARM32=arm-linux-gnueabi-
     LLVM=1
@@ -138,10 +140,8 @@ if [ "$PREBUILT_MODE" -eq 1 ]; then
     echo -e "${BLUE}Instalando kernel headers...${NC}"
     make "${MAKE_ARGS[@]}" INSTALL_HDR_PATH="$PREBUILT_DIR/kernel-headers" headers_install
 
-    # Limpar arquivos de controle gerados pelo kbuild
     find "$PREBUILT_DIR/kernel-headers" \( -name "..install.cmd" -o -name ".install" \) -delete 2>/dev/null
 
-    # Copiar headers da pasta include para a raiz de kernel-headers para compatibilidade ampla
     if [ -d "$PREBUILT_DIR/kernel-headers/include" ]; then
         cp -rn "$PREBUILT_DIR/kernel-headers/include/"* "$PREBUILT_DIR/kernel-headers/" 2>/dev/null || true
     fi
@@ -166,13 +166,17 @@ else
     cp "$BOOT_DIR/dtb" AnyKernel3/dtb
 
     cd AnyKernel3
-
     zip -r9 "../$ZIPNAME" * -x .git README.md *placeholder
     cd ..
 fi
 
-git restore drivers/Kconfig
-git restore drivers/Makefile
+echo -e "\n${GREEN}SHA-256 Checksums:${NC}"
+sha256sum "$BOOT_DIR/Image"
+sha256sum "$BOOT_DIR/dtbo.img"
+sha256sum "$BOOT_DIR/dtb"
+if [ -f "$ZIPNAME" ]; then
+    sha256sum "$ZIPNAME"
+fi
 
 echo -e "\n${GREEN}Completed in $((SECONDS / 60)) minute(s) and $((SECONDS % 60)) second(s)!${NC}"
 if [ "$PREBUILT_MODE" -eq 1 ]; then
