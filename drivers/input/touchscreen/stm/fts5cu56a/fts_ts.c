@@ -1541,7 +1541,7 @@ reset:
 
 	info->charger_mode = FTS_BIT_CHARGER_MODE_NORMAL;
 
-	info->lowpower_flag = 0x00;
+	info->lowpower_flag = FTS_MODE_DOUBLETAP_WAKEUP;
 
 #ifdef TCLM_CONCEPT
 	info->tdata->external_factory = false;
@@ -2073,18 +2073,17 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 						info->scrub_x = (p_gesture_status->gesture_data_1 << 4) | (p_gesture_status->gesture_data_3 >> 4);
 						info->scrub_y = (p_gesture_status->gesture_data_2 << 4) | (p_gesture_status->gesture_data_3 & 0x0F);
 
-						input_info(true, &info->client->dev, "%s: AOD\n", __func__);
 						input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 1);
 						input_sync(info->input_dev);
 						input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 0);
-					} else if (p_gesture_status->gesture_id == FTS_SPONGE_EVENT_GESTURE_ID_DOUBLETAP_TO_WAKEUP) {
-						input_report_key(info->input_dev, KEY_WAKEUP, 1);
 						input_sync(info->input_dev);
-						input_report_key(info->input_dev, KEY_WAKEUP, 0);
-						input_sync(info->input_dev);
-						pm_wakeup_event(&info->client->dev, 1000);
-						input_info(true, &info->client->dev, "%s: DOUBLE TAP TO WAKEUP\n", __func__);
 					}
+					input_report_key(info->input_dev, KEY_WAKEUP, 1);
+					input_sync(info->input_dev);
+					input_report_key(info->input_dev, KEY_WAKEUP, 0);
+					input_sync(info->input_dev);
+					pm_wakeup_event(&info->client->dev, 1000);
+					input_info(true, &info->client->dev, "%s: DOUBLE TAP TO WAKEUP (id:%d)\n", __func__, p_gesture_status->gesture_id);
 					break;
 				case FTS_SPONGE_EVENT_SINGLETAP:
 					info->scrub_id = SPONGE_EVENT_TYPE_SINGLE_TAP;
@@ -2270,20 +2269,13 @@ static irqreturn_t fts_interrupt_handler(int irq, void *handle)
 	if (info->fts_power_state == FTS_POWER_STATE_LOWPOWER) {
 		input_dbg(true, &info->client->dev, "%s: run LPM interrupt handler\n", __func__);
 
-		wake_lock_timeout(&info->wakelock, msecs_to_jiffies(500));
-		/* waiting for blsp block resuming, if not occurs i2c error */
-		ret = wait_for_completion_interruptible_timeout(&info->resume_done, msecs_to_jiffies(500));
-		if (ret == 0) {
-			input_err(true, &info->client->dev, "%s: LPM: pm resume is not handled\n", __func__);
-			return IRQ_NONE;
-		}
+		wake_lock_timeout(&info->wakelock, msecs_to_jiffies(1000));
+		pm_wakeup_event(&info->client->dev, 1000);
 
-		if (ret < 0) {
-			input_err(true, &info->client->dev, "%s: LPM: -ERESTARTSYS if interrupted, %d\n", __func__, ret);
-			return IRQ_NONE;
-		}
+		if (!info->resume_done.done)
+			complete_all(&info->resume_done);
 
-		input_info(true, &info->client->dev, "%s: run LPM interrupt handler, %d\n", __func__, jiffies_to_msecs(ret));
+		input_info(true, &info->client->dev, "%s: run LPM interrupt handler\n", __func__);
 		/* run lpm interrupt handler */
 	}
 
@@ -2913,6 +2905,7 @@ static void fts_set_input_prop(struct fts_ts_info *info, struct input_dev *dev, 
 	set_bit(BTN_TOOL_FINGER, dev->keybit);
 	set_bit(KEY_BLACK_UI_GESTURE, dev->keybit);
 	set_bit(KEY_WAKEUP, dev->keybit);
+	set_bit(KEY_POWER, dev->keybit);
 	set_bit(KEY_INT_CANCEL, dev->keybit);
 
 	if (info->board->support_sidegesture) {
@@ -3499,13 +3492,10 @@ static void fts_input_close(struct input_dev *dev)
 	if (info->flip_status_current || info->rear_selfie_mode) {
 		fts_stop_device(info);
 	} else {
-		if (info->lowpower_flag || info->ed_enable || info->pocket_mode) {
-			if (info->fix_active_mode)
-				fts_fix_active_mode(info, false);
-			fts_set_lowpowermode(info, TO_LOWPOWER_MODE);
-		} else {
-			fts_stop_device(info);
-		}
+		info->lowpower_flag |= FTS_MODE_DOUBLETAP_WAKEUP;
+		if (info->fix_active_mode)
+			fts_fix_active_mode(info, false);
+		fts_set_lowpowermode(info, TO_LOWPOWER_MODE);
 	}
 #ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
 	mutex_unlock(&info->switching_mutex);
@@ -3682,6 +3672,11 @@ out:
 		fts_set_hsync_scanmode(info, FTS_CMD_LPM_ASYNC_SCAN);
 #endif
 	fts_set_scanmode(info, info->scan_mode);
+	fts_change_scan_rate(info, 240);
+	{
+		u8 g_cmd[3] = {FTS_CMD_SET_FUNCTION_ONOFF, FTS_FUNCTION_SET_GAME_MODE, 0x01};
+		fts_write_reg(info, g_cmd, 3);
+	}
 }
 
 void fts_locked_release_all_finger(struct fts_ts_info *info)
@@ -4133,8 +4128,7 @@ int fts_set_lowpowermode(struct fts_ts_info *info, u8 mode)
 	}
 
 	if (mode == TO_LOWPOWER_MODE) {
-		if (device_may_wakeup(&info->client->dev))
-			enable_irq_wake(info->irq);
+		enable_irq_wake(info->irq);
 
 		if (info->read_ito)
 			fts_panel_ito_test(info, OPEN_SHORT_CRACK_TEST);
@@ -4160,7 +4154,7 @@ int fts_set_lowpowermode(struct fts_ts_info *info, u8 mode)
 			if (info->prox_power_off)
 				d_lowpower_flag = info->lowpower_flag & ~FTS_MODE_DOUBLETAP_WAKEUP;
 			else
-				d_lowpower_flag = info->lowpower_flag;
+				d_lowpower_flag = info->lowpower_flag | FTS_MODE_DOUBLETAP_WAKEUP;
 
 			info->fts_write_to_sponge(info, FTS_CMD_SPONGE_OFFSET_MODE,
 					&d_lowpower_flag, sizeof(d_lowpower_flag));
@@ -4244,6 +4238,7 @@ static int fts_start_device(struct fts_ts_info *info)
 	info->fts_power_state = FTS_POWER_STATE_ACTIVE;
 	fts_reinit(info, false);//true);
 	info->reinit_done = true;
+	fts_change_scan_rate(info, 240);
 
 	if (info->board->support_ear_detect) {
 		u8 data[2];

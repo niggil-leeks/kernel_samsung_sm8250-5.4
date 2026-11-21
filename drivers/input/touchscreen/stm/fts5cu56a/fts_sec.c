@@ -6259,7 +6259,7 @@ static void report_rate(void *device_data)
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	} else {
 
-		scan_rate = sec->cmd_param[0];
+		scan_rate = sec->cmd_param[0] == 0 ? 240 : (u8)sec->cmd_param[0];
 		fts_change_scan_rate(info, scan_rate);
 
 		snprintf(buff, sizeof(buff), "OK");
