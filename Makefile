@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0
-VERSION = 4
-PATCHLEVEL = 19
-SUBLEVEL = 325
-EXTRAVERSION =
-NAME = "People's Front"
+VERSION = 5
+PATCHLEVEL = 4
+SUBLEVEL = 233
+EXTRAVERSION = -Mushroom
+NAME = "Mushroom"
 
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"
@@ -1393,7 +1393,7 @@ endef
 
 define filechk_version.h
 	(echo \#define LINUX_VERSION_CODE $(shell                         \
-	expr $(VERSION) \* 65536 + 0$(PATCHLEVEL) \* 256 + 255); \
+	expr 4 \* 65536 + 19 \* 256 + 255); \
 	echo '#define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))';)
 endef
 
