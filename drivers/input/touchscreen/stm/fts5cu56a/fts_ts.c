@@ -2081,6 +2081,8 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 						input_report_key(info->input_dev, KEY_WAKEUP, 1);
 						input_sync(info->input_dev);
 						input_report_key(info->input_dev, KEY_WAKEUP, 0);
+						input_sync(info->input_dev);
+						pm_wakeup_event(&info->client->dev, 1000);
 						input_info(true, &info->client->dev, "%s: DOUBLE TAP TO WAKEUP\n", __func__);
 					}
 					break;
