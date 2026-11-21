@@ -150,4 +150,15 @@ struct robust_list_head {
   (((op & 0xf) << 28) | ((cmp & 0xf) << 24)		\
    | ((oparg & 0xfff) << 12) | (cmparg & 0xfff))
 
+
+struct futex_waitv {
+	__u64 val;
+	__u64 uaddr;
+	__u32 flags;
+	__u32 __reserved;
+};
+
+#define FUTEX_32		2
+#define FUTEX_WAITV_MAX		128
+
 #endif /* _UAPI_LINUX_FUTEX_H */

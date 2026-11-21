@@ -4235,3 +4235,42 @@ static int __init futex_init(void)
 	return 0;
 }
 core_initcall(futex_init);
+
+
+SYSCALL_DEFINE5(futex_waitv, struct futex_waitv __user *, waiters,
+		unsigned int, nr_futexes, unsigned int, flags,
+		struct __kernel_timespec __user *, timeout, clockid_t, clockid)
+{
+	struct futex_waitv waitv;
+	int i, ret = 0;
+
+	if (flags)
+		return -EINVAL;
+
+	if (!nr_futexes || nr_futexes > FUTEX_WAITV_MAX)
+		return -EINVAL;
+
+	for (i = 0; i < nr_futexes; i++) {
+		if (copy_from_user(&waitv, &waiters[i], sizeof(waitv)))
+			return -EFAULT;
+		if (waitv.flags != FUTEX_32 || waitv.__reserved)
+			return -EINVAL;
+	}
+
+	if (nr_futexes == 1) {
+		ktime_t t, *tp = NULL;
+		if (timeout) {
+			struct __kernel_timespec ts;
+			if (copy_from_user(&ts, timeout, sizeof(ts)))
+				return -EFAULT;
+			t = timespec64_to_ktime((struct timespec64){ts.tv_sec, ts.tv_nsec});
+			tp = &t;
+		}
+		ret = do_futex((u32 __user *)(unsigned long)waitv.uaddr,
+			       FUTEX_WAIT_BITSET, (u32)waitv.val, tp,
+			       NULL, 0, FUTEX_BITSET_MATCH_ANY);
+		return ret < 0 ? ret : 0;
+	}
+
+	return -ENOSYS;
+}

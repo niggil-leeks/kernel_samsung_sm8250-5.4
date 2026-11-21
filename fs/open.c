@@ -1,3 +1,4 @@
+#include <uapi/linux/openat2.h>
 /*
  *  linux/fs/open.c
  *
@@ -1229,6 +1230,34 @@ SYSCALL_DEFINE4(openat, int, dfd, const char __user *, filename, int, flags,
 
 	return do_sys_open(dfd, filename, flags, mode);
 }
+
+SYSCALL_DEFINE4(openat2, int, dfd, const char __user *, filename,
+		struct open_how __user *, how, size_t, usize)
+{
+	struct open_how tmp;
+	int flags;
+
+	if (usize < OPEN_HOW_SIZE_VER0)
+		return -EINVAL;
+
+	if (copy_from_user(&tmp, how, min_t(size_t, sizeof(tmp), usize)))
+		return -EFAULT;
+
+	if (tmp.resolve & ~(RESOLVE_NO_XDEV | RESOLVE_NO_MAGICLINKS |
+			    RESOLVE_NO_SYMLINKS | RESOLVE_BENEATH |
+			    RESOLVE_IN_ROOT | RESOLVE_CACHED))
+		return -EINVAL;
+
+	flags = (int)tmp.flags;
+	if (force_o_largefile())
+		flags |= O_LARGEFILE;
+
+	if (tmp.resolve & RESOLVE_NO_SYMLINKS)
+		flags |= O_NOFOLLOW;
+
+	return do_sys_open(dfd, filename, flags, (umode_t)tmp.mode);
+}
+
 
 #ifdef CONFIG_COMPAT
 /*

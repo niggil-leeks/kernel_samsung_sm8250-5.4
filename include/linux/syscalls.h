@@ -791,6 +791,13 @@ asmlinkage long sys_clone(unsigned long, unsigned long, int __user *,
 #endif
 
 asmlinkage long sys_clone3(struct clone_args __user *uargs, size_t size);
+struct open_how;
+struct futex_waitv;
+asmlinkage long sys_openat2(int dfd, const char __user *filename,
+			    struct open_how __user *how, size_t usize);
+asmlinkage long sys_futex_waitv(struct futex_waitv __user *waiters,
+				unsigned int nr_futexes, unsigned int flags,
+				struct __kernel_timespec __user *timeout, clockid_t clockid);
 
 asmlinkage long sys_execve(const char __user *filename,
 		const char __user *const __user *argv,
